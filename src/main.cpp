@@ -10,12 +10,12 @@ Adafruit_BNO055 bno = Adafruit_BNO055(55,0x28,&Wire); ///< BNO055のインスタ
 
 const int IDs[4] = {0,1,2,3};
 
-bool emergencyStop = false;
-unsigned long stopTime = 0;
-
-float prevMag = 0;
+float lastAccX = 0;
 float lastAccY = 0;
+float lastAccZ = 0;
 float alpha = 0.8; // フィルタ係数
+float yaw0 = 0; //初期yaw
+
 
 const float THRESHOLD = 15.0; ///< 衝撃を検知するための加速度の閾値 (単位: m/s^2)
 
@@ -32,18 +32,37 @@ void setup() {
   krs.setPos(2, 7500); //サーボID3に目標値7500を設定
   krs.setPos(3, 7500); //サーボID4に目標値7500を設定
   Serial.println("All servos are ready.");
+
+  yaw0 = euler.x();
+
 }
 void loop() {
+  //linear accelleration
   imu::Vector<3> acc = bno.getVector(Adafruit_BNO055::VECTOR_LINEARACCEL);
+  float currentAccX = acc.x();
   float currentAccY = acc.y();
+  float currentAccZ = acc.z();
+  float jerkX = abs(currentAccX - lastAccX);
   float jerkY = abs(currentAccY - lastAccY);
-  
-  if (jerkY > 10.0) { // 急激な変化のみを検知
-    //stopRobot(); // すぐに停止させる関数など
+  float jerkZ = abs(currentAccZ - lastAccZ);
+  // yaw
+  imu::Vector<3> euler = bno.getVector(Adafruit_BNO055::VECTOR_EULER);
+
+  float yaw = euler.x() - yaw0;
+
+  // -180～180へ正規化
+  if (yaw > 180) yaw -= 360;
+  if (yaw < -180) yaw += 360;
+
+  Serial.println(yaw);
+  if (jerkX > 10.0 || jerkY > 10.0 || jerkZ > 10.0) { // 急激な変化のみを検知
+     // すぐに停止させる関数など
     Serial.println("衝突により緊急停止！");
   }
   
+  lastAccX = currentAccX;
   lastAccY = currentAccY;
+  lastAccZ = currentAccZ;
   delay(BNO055_SAMPLERELAYTIME_MS);
   Serial.println("Current Acc Y: "+String(currentAccY)+" Jerk Y: "+String(jerkY));
 }
