@@ -20,21 +20,13 @@ float yaw0 = 0; //初期yaw
 
 bool collisionDetectionEnabled = true;
 unsigned long collisionDisabledUntil = 0;
-float th = 7.0; // 衝撃検知の閾値 (単位: m/s^3)
+
 
 void setup() {
   Serial.begin(115200);
-  delay(200);
-  Serial.println("Starting setup...");
   Wire.begin();
-  Serial.println("I2C initialized.");
   krs.begin();
-  Serial.println("ICS communication initialized.");
-  Serial.println("Initializing BNO055...");
-  while(!bno.begin()){
-    Serial.println(".");
-    delay(500);
-  }
+  bno.begin();
   bno.setExtCrystalUse(true); // 外部クリスタルを使用する設定
   delay(1000); // BNO055の初期化が安定するまで待機
   Serial.println("BNO055 initialized.");
@@ -47,7 +39,7 @@ void setup() {
   euler = bno.getVector(Adafruit_BNO055::VECTOR_EULER);
   yaw0 = euler.x();
 
-  
+
 }
 void loop() {
   if (!collisionDetectionEnabled &&
@@ -83,7 +75,7 @@ void loop() {
   //if (yaw < -180) yaw += 360;
   //Serial.println(yaw);
 
-  if (collisionDetectionEnabled && (jerkX > th || jerkY > th || jerkZ > th)) { // 急激な変化のみを検知
+  if (collisionDetectionEnabled && (jerkX > 2.0 || jerkY > 2.0 || jerkZ > 2.0)) { // 急激な変化のみを検知
     // すぐに停止させる関数など
     collisionDetectionEnabled = false;
     collisionDisabledUntil = millis() + 2500; // 2.5秒間衝撃検知を無効化
